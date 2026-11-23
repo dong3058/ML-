@@ -18,6 +18,7 @@ Kaggle 대회를 기준으로 한 머신러닝 실험 저장소. 프로젝트 �
 |---|---|---|---|
 | [`ashrae-energy-prediction`](ashrae-energy-prediction/README.md) | [ASHRAE – Great Energy Predictor III](https://www.kaggle.com/competitions/ashrae-energy-prediction) | 건물 미터별 시간당 에너지 사용량 예측. LightGBM + Optuna, MLflow, ONNX | Kaggle private 1.458 |
 | [`house-prices-advanced-regression-techniques`](house-prices-advanced-regression-techniques/README.md) | [House Prices – Advanced Regression Techniques](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques) | 주택 가격 예측. CatBoost + LightGBM + Lasso 블렌딩, 오차 분석, Optuna | Kaggle public 0.11870 |
+| [`playground-series-s6e11`](playground-series-s6e11/README.md) | [Playground S6E11 – Predicting Credit Card Fraud](https://www.kaggle.com/competitions/playground-series-s6e11) | 카드 거래 사기 확률 예측 (ROC AUC). LightGBM + Optuna, 놓친 사기 분석·SHAP 군집화, 구간 타깃 인코딩 | Kaggle public 0.95104 (정석 0.94788) |
 
 ## 공통 규칙
 
