@@ -120,11 +120,21 @@ def add_business_keys(K, Kte, tr, te):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--group", default="all", choices=list(GROUPS))
+    ap.add_argument("--ratio", action="store_true", help="가맹점 위험 점수 / (거래 속도 점수 + 1) 피처 추가 (v14)")
+    ap.add_argument("--no-te", action="store_true", help="TE 없이 v7 + 추가 피처만")
     args = ap.parse_args()
-    tag = "" if args.group == "all" else "_" + args.group
+    tag = ("" if args.group == "all" else "_" + args.group)
+    if args.no_te:
+        tag = "_v7"
+    if args.ratio:
+        tag += "_ratio"
     tr, te = L.load()
     y = tr[L.TARGET].astype(int).to_numpy()
     X, Xte = G.prepare(tr), G.prepare(te)
+    if args.ratio:
+        # 거래 속도 점수는 0 인 행이 있어 분모에 +1
+        for d, src in [(X, tr), (Xte, te)]:
+            d["risk_per_velocity"] = src.merchant_risk_score / (src.velocity_score + 1)
     Xte[L.CATEGORICAL] = Xte[L.CATEGORICAL].apply(lambda s: s.cat.set_categories(X[s.name].cat.categories))
     K, Kte = make_keys(tr), make_keys(te)
     K, Kte = add_business_keys(K, Kte, tr, te)
@@ -138,9 +148,12 @@ def main():
     splits = list(StratifiedKFold(5, shuffle=True, random_state=L.SEED).split(X, y))
     oof, pte, imps = np.zeros(len(y)), np.zeros(len(te)), []
     for k, (tr_i, va_i) in enumerate(splits):
-        te_tr = te_oof(K.iloc[tr_i], y[tr_i], seed=L.SEED + 100 + k)
-        te_va = te_apply(K.iloc[tr_i], y[tr_i], K.iloc[va_i])
-        te_te = te_apply(K.iloc[tr_i], y[tr_i], Kte)
+        if args.no_te:
+            te_tr, te_va, te_te = (pd.DataFrame(index=range(n)) for n in (len(tr_i), len(va_i), len(te)))
+        else:
+            te_tr = te_oof(K.iloc[tr_i], y[tr_i], seed=L.SEED + 100 + k)
+            te_va = te_apply(K.iloc[tr_i], y[tr_i], K.iloc[va_i])
+            te_te = te_apply(K.iloc[tr_i], y[tr_i], Kte)
         Xa = pd.concat([X.iloc[tr_i].reset_index(drop=True), te_tr.reset_index(drop=True)], axis=1)
         Xb = pd.concat([X.iloc[va_i].reset_index(drop=True), te_va.reset_index(drop=True)], axis=1)
         Xt = pd.concat([Xte.reset_index(drop=True), te_te.reset_index(drop=True)], axis=1)
@@ -158,7 +171,15 @@ def main():
         fold_id[va_i] = k
     gains = [roc_auc_score(y[fold_id == f], oof[fold_id == f]) - roc_auc_score(y[fold_id == f], v7[fold_id == f])
              for f in range(5)]
-    print(f"\nv10 OOF AUC {roc_auc_score(y, oof):.5f}  logloss {log_loss(y, oof):.5f}")
+    ref = L.OUT / ("oof_lightgbm_tuned.csv" if args.no_te else f"oof_digit_te{tag.replace('_ratio', '')}.csv")
+    if args.ratio and ref.exists():
+        r = pd.read_csv(ref)["p"].to_numpy()
+        g2 = [roc_auc_score(y[fold_id == f], oof[fold_id == f]) - roc_auc_score(y[fold_id == f], r[fold_id == f])
+              for f in range(5)]
+        print(f"\n[비율 피처 효과] 같은 모델 비율 피처 없음({ref.name}) {roc_auc_score(y, r):.5f} → 있음 "
+              f"{roc_auc_score(y, oof):.5f}  변화 {roc_auc_score(y, oof) - roc_auc_score(y, r):+.5f}  "
+              f"fold 상승 {sum(g > 0 for g in g2)}/5  {[round(g, 5) for g in g2]}")
+    print(f"\n이번 OOF AUC {roc_auc_score(y, oof):.5f}  logloss {log_loss(y, oof):.5f}")
     print(f"v7  OOF AUC {roc_auc_score(y, v7):.5f}  → 변화 {roc_auc_score(y, oof) - roc_auc_score(y, v7):+.5f}, "
           f"fold 상승 {sum(g > 0 for g in gains)}/5, fold별 {[round(g, 5) for g in gains]}")
 
@@ -167,6 +188,9 @@ def main():
     print("\n변수 중요도 (gain %, 5 fold 평균) 상위 25")
     print(imp.head(25).round(2).to_string())
     te_share = imp[imp.index.str.startswith("te_")].sum()
+    if args.ratio:
+        print(f"risk_per_velocity 중요도 {imp.get('risk_per_velocity', 0):.2f}% "
+              f"(순위 {list(imp.index).index('risk_per_velocity') + 1}/{len(imp)})")
     print(f"\nTE 피처 중요도 합 {te_share:.1f}%")
     by_kind = imp[imp.index.str.startswith("te_")].groupby(lambda x: x.split("__")[-1]).sum()
     print("TE 종류별 합:", by_kind.round(2).to_dict())
