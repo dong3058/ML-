@@ -409,8 +409,6 @@ Var = w²a² + (1−w)²b² + 2w(1−w)·ρ·a·b
   └→ 공분산 → 피어슨 상관 → (순위로 바꾸면) 스피어만 상관
 ```
 
-> 참고한 Claude 대화: https://claude.ai/code/session_01U7c2tcdyqmFgishS8Zh2LB
-
 ---
 
 ### 1. 편차·분산·표준편차
@@ -660,8 +658,6 @@ logloss = −[ y·log(p) + (1 − y)·log(1 − p) ]
 
 **gain: 트리 모델이 학습할 때, 어떤 피처로 데이터를 나눴더니 학습 손실(오차)이 얼마나 줄었는지를 모두 더한 값.** LightGBM, XGBoost 같은 GBDT가 학습 중에 자동으로 기록한다. `feature_importance`로 흔히 보는 숫자가 이것이다.
 
-> 참고한 Claude 대화: https://claude.ai/code/session_01U7c2tgTs18jsdDXdNFG8e3
-
 ---
 
 ### 1. 분할 한 번의 gain
@@ -765,8 +761,6 @@ booster.get_score(importance_type="weight")      # split 횟수
 ## SHAP (행별 피처 기여도)
 
 **SHAP (SHapley Additive exPlanations): 예측값 하나를 "기준값 + 피처별 기여도의 합"으로 쪼개서, 행마다 각 피처 값이 예측을 얼마나 올리고 내렸는지 보여 주는 방법.**
-
-> 참고한 Claude 대화: https://claude.ai/code/session_01U7c2tcdyqmFgishS8Zh2LB
 
 ---
 
